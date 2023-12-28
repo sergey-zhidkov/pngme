@@ -82,8 +82,34 @@ impl Chunk {
 impl TryFrom<&[u8]> for Chunk {
     type Error = Error;
 
-    fn try_from(bytes: &[u8]) -> Result<Self> {
-        todo!()
+    fn try_from(value: &[u8]) -> Result<Self> {
+        let data_len = value.len();
+        let mut iter = value.iter().cloned();
+        let first4: [u8; 4] = iter.by_ref().take(4).collect::<Vec<u8>>().as_slice().try_into()?;
+        let length = u32::from_be_bytes(first4);
+
+        let second4: Vec<u8> = iter.by_ref().take(4).collect();
+        let chunk_type = ChunkType::try_from(TryInto::<[u8; 4]>::try_into(second4.as_slice()).unwrap())?;
+
+        let data_bytes: Vec<u8> = iter
+            .by_ref()
+            .take(data_len - 12)
+            .collect();
+
+        let last_bytes: [u8; 4] = iter.take(4).collect::<Vec<u8>>().as_slice().try_into()?;
+        let crc = u32::from_be_bytes(last_bytes);
+
+        let correct_crc = crc == CRC.checksum(Self::get_bytes_for_crc(&chunk_type, &data_bytes).as_slice());
+        if !correct_crc {
+            Err(Error::from("Invalid chunk"))
+        } else {
+            Ok(Chunk {
+                data: data_bytes,
+                length,
+                crc,
+                chunk_type,
+            })
+        }
     }
 }
 
