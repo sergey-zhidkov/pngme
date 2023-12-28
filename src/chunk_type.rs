@@ -45,6 +45,7 @@ impl ChunkType {
 
     /// Valid bytes are represented by the characters A-Z or a-z
     pub fn is_valid_byte(byte: u8) -> bool {
+        let _ = byte;
         todo!()
     }
 }
